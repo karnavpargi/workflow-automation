@@ -8,7 +8,7 @@ so even a buggy queryset cannot leak another tenant's rows.
 
 from django.db import connection
 
-TENANT_SCOPED_TABLES = ["tenants_tenant"]  # extend in later plans
+TENANT_SCOPED_TABLES = ["tenants_tenant", "audit_auditlog"]
 
 
 def enable_rls_on(table: str) -> None:
