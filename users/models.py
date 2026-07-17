@@ -1,5 +1,5 @@
-# TASK 2 PLACEHOLDER — replaced in Task 5.
-"""User model stub; replaced with the real model in Task 5."""
+# TASK 2 PLACEHOLDER — replaced in Task 9.
+"""User model stub; replaced with the real model in Task 9."""
 from django.contrib.auth.models import AbstractUser
 
 
