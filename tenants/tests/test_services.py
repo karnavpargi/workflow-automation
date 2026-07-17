@@ -25,3 +25,13 @@ def test_create_tenant_slug_must_be_unique():
     services.create_tenant(name="Acme", slug="acme", admin=u)
     with pytest.raises(services.TenantSlugTaken):
         services.create_tenant(name="Acme2", slug="acme", admin=u)
+
+
+@pytest.mark.django_db
+def test_create_tenant_writes_audit():
+    from audit.models import AuditLog
+    from users.models import User
+
+    u = User.objects.create_user(email="o@x.io", password="p", username="o")
+    services.create_tenant(name="Acme", slug="acme", admin=u)
+    assert AuditLog.objects.filter(event="tenant.created").count() == 1

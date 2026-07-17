@@ -32,4 +32,7 @@ def create_tenant(*, name: str, slug: str, admin) -> Tenant:
     with transaction.atomic():
         t = Tenant.objects.create(name=name, slug=slug)
         Membership.objects.create(tenant=t, user=admin, role=Membership.Role.ADMIN)
+        from audit.services import log as audit_log
+
+        audit_log(tenant=t, actor=admin, event="tenant.created", payload={"slug": slug})
     return t
