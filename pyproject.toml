@@ -1,0 +1,55 @@
+[project]
+name = "workflow-automation"
+version = "0.1.0"
+requires-python = ">=3.12"
+dependencies = [
+  "Django>=5.0,<6.0",
+  "djangorestframework>=3.15",
+  "djangorestframework-simplejwt>=5.3",
+  "psycopg[binary]>=3.1",
+  "celery[redis]>=5.4",
+  "redis>=5.0",
+  "python-dotenv>=1.0",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8.0",
+  "pytest-django>=4.8",
+  "ruff>=0.5",
+  "black>=24.4",
+  "pydocstyle>=6.3",
+  "mypy>=1.10",
+]
+
+[tool.ruff]
+line-length = 88
+target-version = "py312"
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "SIM", "C4"]
+
+[tool.black]
+line-length = 88
+target-version = ["py312"]
+
+[tool.pydocstyle]
+convention = "google"
+match-dir = "(tenants|users|audit|wa_main)"
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+exclude = ["migrations/"]
+
+[[tool.mypy.overrides]]
+module = ["celery.*", "redis.*"]
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "wa_main.settings.test"
+python_files = ["test_*.py"]
+addopts = "-ra --strict-markers"
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
