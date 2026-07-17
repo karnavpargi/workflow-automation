@@ -19,7 +19,10 @@ Automation domains:
 3. **Invoicing** — recurring and one-time invoice generation, PDF delivery,
    sync with Invoice Ninja, auto-reminders before due date.
 4. **Data entry** — ingest from four sources: web forms, CSV/Excel uploads,
-   inbound email parsing, inbound webhooks/API calls.
+   inbound email parsing (LLM-assisted), inbound webhooks/API calls.
+5. **AI assist** — LLM-driven email parsing, document extraction,
+   follow-up drafting (RAG over past successes), semantic search across
+   clients/invoices/audit log.
 
 ## Hard Constraints (apply to all implementation work)
 
@@ -28,12 +31,26 @@ Automation domains:
   enforced by `pydocstyle` / `flake8-docstrings`.
 - **ctx7** (`context7`) MUST be used for any library, framework, SDK, API, or
   CLI documentation lookup — Django, DRF, Celery, React, Vite, Invoice Ninja
-  API, SuiteCRM API, Mattermost webhooks, etc. Do not rely on memory.
+  API, SuiteCRM API, Mattermost webhooks, **LangChain / LangGraph / LangSmith
+  / pgvector / OpenAI / Ollama**, etc. Do not rely on memory.
 - **`ui-ux-pro-max` skill** MUST be invoked before any React/UI component
-  work (app-shell, admin-portal, client-portal, ui-kit).
+  work — including admin-portal, client-portal, app-shell, ui-kit, and any
+  surface that displays AI artifacts (drafted follow-ups, extracted data
+  previews, agent trace viewers).
 - **Fully self-hosted** — no managed/PaaS dependencies; everything runs as
   Docker services on a single VM, horizontally scalable later.
-- **Free / open-source integrations only.**
+  **Exception:** LangSmith Developer (free SaaS tier, 5k traces/mo, 1 seat)
+  is used for AI observability/eval/prompt hub only. All other infrastructure
+  is self-hosted. Self-host LangSmith later if usage Enterprise-tier demands it.
+- **Free / open-source integrations only** (LangSmith SaaS free tier is the
+  sole commercial exception per above).
+- **LLM providers:** OpenAI (primary) → Ollama (self-hosted backup), behind
+  LangChain's `ChatModel` abstraction so swapping is one line.
+- **LangChain ecosystem (all free OSS, MIT) is in scope:**
+  `langchain`, `langchain-core`, `langchain-community`, `langchain-experimental`,
+  `langgraph`, `langchain-postgres` (pgvector).
+- **LangSmith (commercial SaaS, free Developer tier):** used for LLM tracing,
+  evaluation, and Prompt Hub. Self-hosted Enterprise later when revenue permits.
 
 ## Architecture Overview
 
@@ -52,6 +69,11 @@ Compose on a single VM (horizontally scalable later).
 ├─────────────────────────────────────────────────────┤
 │  Integrations (sidecar services or HTTP clients):     │
 │  • SuiteCRM · Invoice Ninja · Nextcloud · Mattermost  │
+├─────────────────────────────────────────────────────┤
+│  AI layer: LangGraph agents · OpenAI (primary) ·       │
+│  Ollama (fallback) · pgvector on existing Postgres    │
+├─────────────────────────────────────────────────────┤
+│  AI service (FastAPI): agents + guards + audit · locust │
 └─────────────────────────────────────────────────────┘
 ```
 
@@ -75,7 +97,8 @@ tenant-aware queryset; cross-tenant access returns 404 (no data leakage).
 
 | Layer             | Technology                                              |
 | ---------------- | ------------------------------------------------------- |
-| Backend          | Django + Django REST Framework                          |
+| Main backend     | Django + Django REST Framework (CRM, billing, tenants, workflows) |
+| AI service       | FastAPI (separate Python microservice hosting LangGraph agents) |
 | Language         | Python (PEP 8, Google docstrings)                       |
 | Database         | PostgreSQL (self-hosted)                                |
 | Cache / broker    | Redis (self-hosted)                                     |
@@ -91,6 +114,16 @@ tenant-aware queryset; cross-tenant access returns 404 (no data leakage).
 | Packaging        | Docker Compose (single VM); services decoupled for scale |
 | Reverse proxy    | Caddy (auto-TLS)                                        |
 | Chat             | Mattermost (self-hosted, webhook notifications)         |
+| LLM provider     | OpenAI (primary) → Ollama (self-hosted fallback)        |
+| AI framework     | LangChain + LangChain-Core + LangChain-Community + LangChain-Experimental |
+| AI orchestration | LangGraph (stateful agents, HITL checkpoints)            |
+| AI vector store  | pgvector extension on the same PostgreSQL (HNSW index)  |
+| AI tracing/eval  | LangSmith Developer (free SaaS, 5k traces/mo, 1 seat)   |
+| Document parsing | `unstructured` + `PyMuPDF` (pre-LLM text extraction)     |
+| Embeddings       | OpenAI `text-embedding-3-small` → Ollama fallback → HuggingFace `BAAI/bge-small-en` (self-hosted last-resort) |
+| Safety / RAI     | `guardrails-ai` + `presidio` (PII filter) + per-tenant rate limits + prompt-injection defense |
+| Eval / EDA       | `pandas` + `scikit-learn` + `matplotlib` for offline eval dashboards on LangSmith exports |
+| Load testing     | `locust` (Python, self-hosted, free)                     |
 
 ## Components (bounded units)
 
@@ -120,6 +153,43 @@ understood and tested independently.
   - `ChatAdapter` (Mattermost webhooks)
   - `EmailAdapter` (Django email + `django-anymail` SMTP)
 - **`notifications/`** — Outbox, channels (email/chat), templating.
+- **`ai/llm/`** — provider factory (`ChatOpenAI` → `ChatOllama` fallback),
+  model registry, per-tenant model config, token budget tracking.
+  All calls traced via `langchain.callbacks` to LangSmith.
+- **`ai/embeddings/`** — `EmbeddingsOpenAI(text-embedding-3-small)` → Ollama
+  embedding fallback; service used for semantic search and RAG ingest.
+- **`ai/agents/`** — LangGraph agent definitions, one per use case:
+  - `EmailParsingAgent` — parse → classify → extract structured fields →
+    dispatch to `dataentry` (replaces the regex-only parser branch)
+  - `DocumentExtractionAgent` — `unstructured` pre-parse → LLM structured
+    extraction → pgvector embed for semantic search
+  - `FollowupDraftingAgent` — RAG over tenant's past successful follow-ups
+    (pgvector) → draft reminder copy (HITL checkpoint before send)
+- **`ai/prompts/`** — versioned prompt registry synced from LangSmith Prompt
+  Hub; pins prompt versions per release so evals are reproducible.
+- **`ai/extraction/`** — thin wrapper over `unstructured` + `PyMuPDF` for
+  pre-LLM text extraction (PDFs, DOCX, XLSX, EML).
+- **`ai/safety/`** — `guardrails-ai` input/output guards, `presidio` PII
+  scrub, prompt-injection classifier, moderation adapter (OpenAI moderation
+  → local fallback), and the `ai_llm_call` audit writer.
+- **`ai/eval/`** — `pandas` + `scikit-learn` + `matplotlib` notebooks /
+  scripts that pull LangSmith exports and produce offline eval dashboards
+  (F1 for extraction, ROC-AUC for the injection classifier, helpfulness).
+
+### AI service (FastAPI microservice)
+
+A separate Python service — `ai_service/` — built with **FastAPI**,
+containerized alongside Django. It owns all LangGraph agents and LLM I/O so
+LLM concerns never leak into the Django monolith.
+
+- **Routes:**
+  - `POST /agents/email-parse` — run `EmailParsingAgent` on a raw email.
+  - `POST /agents/extract-document` — run `DocumentExtractionAgent` on an uploaded doc.
+  - `POST /agents/draft-followup` — run `FollowupDraftingAgent` with context; returns draft + guard decisions + trace URL.
+  - `POST /search` — pgvector semantic search across the tenant's corpus.
+- **Every route** applies the input guards → agent → output guards → audit, and returns a stable JSON envelope `{data, guards, trace_url, cost_usd, latency_ms}`.
+- **Auth** — shared JWT verification with Django (same secret, same claims, tenant_id enforced in every query).
+- **Health** — `/healthz` for liveness, `/readyz` checks OpenAI + Ollama + pgvector connectivity.
 
 **Layering convention:**
 
@@ -176,15 +246,36 @@ understood and tested independently.
    → audit.log(...)
 ```
 
-### Flow C — Data entry (email parsing)
+### Flow C — Data entry (email parsing, LLM-assisted)
 
 ```
 [Inbound email] → POST /api/dataentry/webhook (oauth'd mailbox)
-   → DataEntryAdapter.parse() — mail-parser lib for structure extraction
+   → ai.extraction.unstructured.parse() — raw text + structure pre-LLM
+   → ai.agents.EmailParsingAgent (LangGraph) runs:
+       parse → classify (contact / invoice / support / unknown)
+              → extract structured fields via LLM tool-calling
+              → dispatch to dataentry.services.ingest_record()
    → Stages Record in `dataentry_record` with status="pending"
    → Celery task: validate → map → dispatch
      (creates Contact / Invoice / whatever target type field says)
    → Failure → retry queue (3x) → dead-letter → audit + Mattermost alert
+   → LangSmith traces every LLM call (cost + latency + quality)
+```
+
+### Flow D — Follow-up drafting (RAG + HITL)
+
+```
+[followups.schedule() fires] → Celery task: draft_followup(tenant, context)
+   → pgvector: retrieve top-k past successful follow-ups for this tenant/category
+   → ai.agents.FollowupDraftingAgent (LangGraph):
+       system prompt (versioned in LangSmith Prompt Hub)
+         + retrieved examples
+         + context (client name, amount, due date)
+       → drafts reminder copy
+   → HITL checkpoint: draft queued in admin-portal "Review queue"
+   → Tenant admin approves/edits → notifications.send_email()
+   → After send: outcome (+click/reply metadata later) stored as RAG positive
+     example for future drafts
 ```
 
 Each flow has a clear trigger, an idempotent worker, a retry policy, an
@@ -215,6 +306,42 @@ Layered, typed, and never worker-crashing.
 - **Tenant data isolation** — Row-Level Security policies on every
   tenant-scoped table; tests assert cross-tenant access fails.
 
+## Responsible AI (guardrails, auditability, user outcomes)
+
+Every LLM call in the system passes through a guardrail layer in the FastAPI
+AI service before it is sent to OpenAI/Ollama, and every response is filtered
+and logged before it reaches a user or downstream workflow.
+
+- **Input guards (`Guardrails-AI`)** — applied at the FastAPI boundary:
+  - Prompt-injection detection (known-injection patterns + a small classifier).
+  - PII detection via `presidio-analyzer` (email, phone, SSN, card, IBAN)
+    with redaction or rejection per tenant policy.
+  - Topic restriction: tenant-configurable allow-list of categories the
+  LLM is permitted to discuss (e.g. "invoice, onboarding, follow-ups"); out-of-scope → reject + audit.
+  - Token/prompt-size cap per request.
+- **Output guards** — applied before returning the LLM result:
+  - `presidio` PII scrub on model output.
+  - Schema-constrained generation via LangChain `with_structured_output` so
+  agents cannot return free-form payloads to downstream services.
+  - Content classifier: reject hate/harassment/self-harm (OpenAI
+  moderation endpoint; Ollama fallback uses a small local classifier).
+- **Auditability** — every LLM I/O record stored in `ai_llm_call`:
+  tenant_id, user_id, agent_name, prompt_version, input_hash, output_hash,
+  guard_decisions, latency_ms, cost_usd, langsmith_trace_url. Retained 180 days.
+- **Per-tenant rate limits + budgets** — tokens-per-day and
+  requests-per-minute per tenant; overage → queue (not fail).
+- **HITL checkpoints** — any LLM output that becomes an outbound message
+  (follow-up draft, onboarding copy) stops in a Review Queue; a human
+  admin approves/edits before send.
+- **Prompt versioning** — prompts pinned per release via LangSmith Prompt
+  Hub; rollback is a config flip, no code dep.
+- **Continuous eval** — LangSmith Evals run nightly over a held-out
+  evaluation set per agent (email-classification accuracy, field-extraction
+  F1, follow-up helpfulness score). Regressions open a Mattermost alert.
+- **User-outcome feedback loop** — outcome of approved follow-ups
+  (replied/paid/ignored) feeds the RAG corpus and the eval set, so the
+  system measurably improves over time.
+
 ## Testing Strategy (TDD throughout)
 
 Discipline: tests before implementation, per the `test-driven-development`
@@ -235,6 +362,16 @@ skill. Red → Green → Refactor. No implementation code without a failing test
   Playwright E2E for the two portal critical paths:
   1. Login → onboarding status (admin),
   2. Login → pay invoice (client).
+- **AI agent tests** — each LangGraph agent pinned with golden I/O cases
+  in a fixtures file (so offline tests don't burn tokens); live-LLM tests
+  run only when `MAKE_REAL=1` and assert schema validity, guard decisions,
+  and that PII is scrubbed. Stochastic assertions use scikit-learn metrics
+  (F1 for field extraction, ROC-AUC for the injection classifier).
+- **Locust load tests** — per FastAPI AI endpoint: target p95 < 4s for a
+  typical follow-up draft, < 2s for email classification. Tenants stay
+  within configured tokens/min. Run nightly in CI.
+- **Eval suite** — LangSmith Evals run nightly; regression threshold gates
+  the model-promote gate.
 - **Coverage** — target ≥ 85% on `services.py` layers; monitored in CI.
 
 ## CI Guardrails
@@ -252,5 +389,7 @@ All checks must pass before merge.
 - Marketplace / sales of the SaaS to outside agencies beyond multi-tenancy
   plumbing (no billing for the SaaS itself yet).
 - Mobile native apps (responsive web only for v1).
-- AI / LLM-driven workflow generation (rule/event-driven only for v1).
+- Custom model training (PyTorch/TensorFlow/SageMaker/Azure ML pipelines).
+  We use off-the-shelf OpenAI/Ollama models + LangChain; no fine-tuning in v1.
+- Managed cloud platforms (AWS Fargate/ECS, Azure AKS, SageMaker, Bedrock).
 - Any managed/PaaS dependency (Supabase, Render, Railway, Fly.io).
