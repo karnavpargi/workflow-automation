@@ -39,6 +39,11 @@ jobs:
           DB_USER: wa
           DB_PASSWORD: wa
           DJANGO_SECRET_KEY: ci-secret
+      - name: Install psql and downgrade wa role
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client
+          PGPASSWORD=wa psql -h localhost -U wa -d wa_test -c "ALTER USER wa NOSUPERUSER;"
       - run: pytest -v
         env:
           DJANGO_SETTINGS_MODULE: wa_main.settings.test
