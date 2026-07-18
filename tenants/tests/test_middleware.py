@@ -4,7 +4,7 @@ from collections.abc import Callable
 from typing import Any
 
 import pytest
-from django.http import HttpRequest, HttpResponse
+from django.http import Http404, HttpRequest, HttpResponse
 from django.test import RequestFactory
 
 from tenants.middleware import TenantMiddleware
@@ -38,7 +38,7 @@ def test_middleware_sets_tenant_from_header() -> None:
 
 @pytest.mark.django_db
 def test_middleware_returns_404_unknown_tenant() -> None:
-    """Unknown slugs produce 404."""
+    """Unknown slugs raise Http404."""
     from users.models import User
 
     u = User.objects.create_user(email="a@x.io", password="p", username="a")
@@ -46,5 +46,5 @@ def test_middleware_returns_404_unknown_tenant() -> None:
     mw = TenantMiddleware(app)
     req = RequestFactory().get("/", HTTP_X_TENANT_SLUG="nope")
     req.user = u
-    resp = mw(req)
-    assert resp.status_code == 404
+    with pytest.raises(Http404):
+        mw(req)
