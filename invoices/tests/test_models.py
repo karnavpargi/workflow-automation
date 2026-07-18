@@ -53,3 +53,34 @@ def test_recurring_schedule_next_run_defaults_to_today():
         cadence="monthly",
     )
     assert sched.next_run == timezone.now().date()
+
+
+@pytest.mark.django_db
+def test_invoice_save_can_skip_total_recompute():
+    """Invoice.save() respects _skip_total_recompute so callers can set total.
+
+    Used by write-offs and manual discounts where ``total`` is not derived
+    from line items.
+    """
+    from tenants import services as tsvc
+    from users.models import User
+    from onboarding.models import Client
+
+    u = User.objects.create_user(email="a@x.io", password="p", username="a")
+    t = tsvc.create_tenant(name="A", slug="a", admin=u)
+    c = Client.objects.create(tenant=t, name="Acme", email="a@acme.io")
+    inv = Invoice.objects.create(
+        tenant=t,
+        client=c,
+        number="INV-WO",
+        due_date=date(2026, 12, 31),
+    )
+    LineItem.objects.create(
+        invoice=inv, description="Web", quantity=1, unit_price=Decimal("100")
+    )
+    # Without the flag, total would be recomputed from lines
+    inv._skip_total_recompute = True
+    inv.total = Decimal("0.00")
+    inv.save()
+    inv.refresh_from_db()
+    assert inv.total == Decimal("0.00")

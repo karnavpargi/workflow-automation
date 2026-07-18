@@ -56,8 +56,12 @@ class Invoice(models.Model):
         LineItems FK the Invoice, so the Invoice must be saved before any
         line can be added. Once ``self.pk`` is set, we can sum the lines
         and keep ``total`` consistent.
+
+        Set ``_skip_total_recompute = True`` on the instance before
+        calling ``save()`` to bypass recomputation (e.g. for write-offs
+        or manual discounts where ``total`` is set explicitly).
         """
-        if self.pk:
+        if self.pk and not getattr(self, "_skip_total_recompute", False):
             self.total = sum(
                 (line.quantity * line.unit_price for line in self.lines.all()),
                 start=Decimal("0.00"),
