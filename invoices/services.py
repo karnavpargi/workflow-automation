@@ -1,11 +1,15 @@
 """Issue an invoice end-to-end."""
 
+from datetime import timedelta
+from decimal import Decimal
+
 from django.db import transaction
+from django.utils import timezone
 
 from audit.services import log as audit_log
 from integrations.models import IntegrationConfig
 from integrations.services import get_adapter
-from invoices.models import Invoice
+from invoices.models import Invoice, RecurringSchedule
 from invoices.pdf import render_invoice_pdf
 
 
@@ -64,3 +68,32 @@ def issue_invoice(*, invoice: Invoice) -> Invoice:
 
         schedule_invoice_reminder(invoice)
     return invoice
+
+
+def issue_invoice_from_schedule(sched: RecurringSchedule) -> Invoice:
+    """Create an Invoice from a RecurringSchedule and issue it.
+
+    Args:
+        sched: RecurringSchedule instance.
+
+    Returns:
+        The issued Invoice.
+    """
+    from invoices.models import LineItem
+
+    today = timezone.now().date()
+    invoice = Invoice.objects.create(
+        tenant=sched.tenant,
+        client=sched.client,
+        number=f"AUTO-{sched.id}-{today.isoformat()}",
+        due_date=today + timedelta(days=30),
+    )
+    for line in sched.template_lines:
+        LineItem.objects.create(
+            invoice=invoice,
+            description=line.get("description", ""),
+            quantity=Decimal(str(line.get("quantity", 1))),
+            unit_price=Decimal(str(line.get("unit_price", 0))),
+        )
+    invoice.save()  # recompute total
+    return issue_invoice(invoice=invoice)
