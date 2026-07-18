@@ -40,4 +40,8 @@ def get_adapter(tenant, kind: str):
         from integrations.billing.invoice_ninja import InvoiceNinjaBillingAdapter
 
         return InvoiceNinjaBillingAdapter(cfg.credentials)
+    if kind == IntegrationConfig.Kind.CRM:
+        from integrations.crm.suitecrm import SuiteCrmAdapter
+
+        return SuiteCrmAdapter(cfg.credentials)
     raise AdapterNotConfigured(kind)
