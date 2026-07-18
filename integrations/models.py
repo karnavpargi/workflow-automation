@@ -9,6 +9,8 @@ class IntegrationConfig(models.Model):
     Attributes:
         tenant: Owning tenant.
         kind: One of CRM, BILLING, STORAGE, CHAT, EMAIL.
+        vendor: Vendor identifier for the kind (e.g. "minio", "nextcloud"
+            for STORAGE). Defaults to "minio" for backward compatibility.
         credentials: JSON blob of vendor credentials (encrypted at rest later).
         is_active: Whether this config is currently used.
     """
@@ -26,6 +28,7 @@ class IntegrationConfig(models.Model):
         "tenants.Tenant", on_delete=models.CASCADE, related_name="integrations"
     )
     kind = models.CharField(max_length=20, choices=Kind.choices)
+    vendor = models.CharField(max_length=20, default="minio", blank=True)
     credentials = models.JSONField(default=dict)
     is_active = models.BooleanField(default=True)
 
