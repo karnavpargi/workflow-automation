@@ -33,6 +33,7 @@ INSTALLED_APPS = [
     "integrations",
     "onboarding",
     "invoices",
+    "followups",
 ]
 
 MIDDLEWARE = [
