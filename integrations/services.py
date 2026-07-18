@@ -28,5 +28,8 @@ def get_adapter(tenant, kind: str):
         raise AdapterNotConfigured(kind) from exc
     if kind == IntegrationConfig.Kind.EMAIL:
         return DjangoSmtpEmailAdapter(cfg.credentials)
-    # other kinds wired in later tasks
+    if kind == IntegrationConfig.Kind.CHAT:
+        from integrations.chat.mattermost import MattermostChatAdapter
+
+        return MattermostChatAdapter(cfg.credentials)
     raise AdapterNotConfigured(kind)
