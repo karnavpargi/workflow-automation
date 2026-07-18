@@ -32,4 +32,8 @@ def get_adapter(tenant, kind: str):
         from integrations.chat.mattermost import MattermostChatAdapter
 
         return MattermostChatAdapter(cfg.credentials)
+    if kind == IntegrationConfig.Kind.STORAGE:
+        from integrations.storage.minio_client import MinioStorageAdapter
+
+        return MinioStorageAdapter(cfg.credentials)
     raise AdapterNotConfigured(kind)

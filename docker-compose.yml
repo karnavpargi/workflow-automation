@@ -61,5 +61,19 @@ services:
     volumes: ["./Caddyfile:/etc/caddy/Caddyfile"]
     depends_on: [web]
 
+  minio:
+    image: minio/minio:latest
+    environment:
+      MINIO_ROOT_USER: minio
+      MINIO_ROOT_PASSWORD: minio123
+    ports: ["9000:9000", "9001:9001"]
+    volumes: ["minio_data:/data"]
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
 volumes:
   db_data:
+  minio_data:
