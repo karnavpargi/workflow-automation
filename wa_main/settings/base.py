@@ -32,6 +32,7 @@ INSTALLED_APPS = [
     "workflows",
     "integrations",
     "onboarding",
+    "invoices",
 ]
 
 MIDDLEWARE = [

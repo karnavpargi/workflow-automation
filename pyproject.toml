@@ -94,7 +94,7 @@ addopts = "-ra --strict-markers"
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["tenants*", "users*", "audit*", "wa_main*", "workflows*", "integrations*", "onboarding*"]
+include = ["tenants*", "users*", "audit*", "wa_main*", "workflows*", "integrations*", "onboarding*", "invoices*"]
 exclude = ["tests*", "docs*", "docker*", "**/migrations*", "**/tests*"]
 
 [build-system]
