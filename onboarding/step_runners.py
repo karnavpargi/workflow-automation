@@ -20,6 +20,13 @@ logger = logging.getLogger(__name__)
 def run_step(self, step_id: int, run_id: int) -> None:
     """Dispatch one ``OnboardingStep`` to its handler.
 
+    Retries with exponential backoff (60s, 120s, 240s) up to
+    ``max_retries`` times. After the final attempt, the exception is
+    re-raised so the failure is recorded in the Celery result backend;
+    the run is not transitioned to ``FAILED`` here because there is no
+    step_id↔run_id mapping in storage beyond the in-flight Celery
+    messages.
+
     Args:
         self: Bound Celery task (for retry).
         step_id: PK of the ``OnboardingStep`` to run.
@@ -33,7 +40,18 @@ def run_step(self, step_id: int, run_id: int) -> None:
     if handler is None:
         logger.warning("Unknown step kind: %s", step.kind)
         return
-    handler(step, run_id)
+    try:
+        handler(step, run_id)
+    except Exception as exc:  # noqa: BLE001
+        if self.request.retries >= self.max_retries:
+            logger.exception(
+                "Step %s permanently failed after %d retries",
+                step_id,
+                self.request.retries,
+            )
+            raise
+        countdown = 60 * (2**self.request.retries)
+        raise self.retry(exc=exc, countdown=countdown) from exc
 
 
 def _welcome_email(step: OnboardingStep, run_id: int) -> None:
