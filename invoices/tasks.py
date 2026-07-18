@@ -4,6 +4,7 @@ import logging
 from datetime import timedelta
 
 from celery import shared_task
+from dateutil.relativedelta import relativedelta
 from django.utils import timezone
 
 from invoices.models import RecurringSchedule
@@ -49,7 +50,7 @@ def check_recurring_invoices() -> int:
             sched.consecutive_failures = 0
         # Advance next_run regardless of success (avoid infinite retries)
         if sched.cadence == "monthly":
-            sched.next_run = today + timedelta(days=30)
+            sched.next_run = today + relativedelta(months=1)
         elif sched.cadence == "weekly":
             sched.next_run = today + timedelta(days=7)
         sched.save(update_fields=["next_run", "consecutive_failures", "is_active"])
