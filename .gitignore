@@ -2,5 +2,18 @@
 # macOS
 .DS_Store
 
-# Worktrees
-.worktrees/
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.venv/
+venv/
+
+# Environment
+.env
+.env.*
+!.env.example

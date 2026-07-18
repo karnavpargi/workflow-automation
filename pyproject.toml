@@ -1,0 +1,92 @@
+[project]
+name = "workflow-automation"
+version = "0.1.0"
+requires-python = ">=3.12"
+dependencies = [
+  "Django>=5.0,<6.0",
+  "djangorestframework>=3.15",
+  "djangorestframework-simplejwt>=5.3",
+  "psycopg[binary]>=3.1",
+  "celery[redis]>=5.4",
+  "redis>=5.0",
+  "python-dotenv>=1.0",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8.0",
+  "pytest-django>=4.8",
+  "ruff>=0.5",
+  "black>=24.4",
+  "pydocstyle>=6.3",
+  "mypy>=1.10",
+  "django-stubs[compatible]>=5.0",
+  "djangorestframework-stubs>=3.15",
+]
+
+[tool.ruff]
+line-length = 88
+target-version = "py312"
+extend-exclude = ["**/migrations/**"]
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "SIM", "C4"]
+
+[tool.black]
+line-length = 88
+target-version = ["py312"]
+extend-exclude = '''
+/(
+    \.eggs
+  | \.git
+  | \.hg
+  | \.mypy_cache
+  | \.nox
+  | \.pants\.d
+  | \.svn
+  | \.tox
+  | \.venv
+  | _build
+  | buck-out
+  | build
+  | dist
+  | migrations
+  | node_modules
+)/
+'''
+
+[tool.pydocstyle]
+convention = "google"
+match-dir = "(tenants|users|audit|wa_main)"
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+exclude = ["migrations/"]
+plugins = ["mypy_django_plugin.main", "mypy_drf_plugin.main"]
+
+[tool.django-stubs]
+django_settings_module = "wa_main.settings.test"
+
+[[tool.mypy.overrides]]
+module = ["celery.*", "redis.*"]
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = [
+  "rest_framework.*",
+  "rest_framework_simplejwt.*",
+  "rest_framework_simplejwt.authentication",
+  "rest_framework_simplejwt.serializers",
+  "rest_framework_simplejwt.tokens",
+  "rest_framework_simplejwt.models",
+]
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "wa_main.settings.test"
+python_files = ["test_*.py"]
+addopts = "-ra --strict-markers"
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
