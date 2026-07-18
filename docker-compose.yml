@@ -6,7 +6,9 @@ services:
       POSTGRES_USER: wa
       POSTGRES_PASSWORD: wa
     ports: ["5432:5432"]
-    volumes: ["db_data:/var/lib/postgresql/data"]
+    volumes:
+      - "db_data:/var/lib/postgresql/data"
+      - "./docker/postgres-init:/docker-entrypoint-initdb.d:ro"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U wa"]
       interval: 5s
