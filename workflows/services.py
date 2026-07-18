@@ -124,13 +124,26 @@ def mark_failed(tr: TaskRecord, error: str) -> None:
     tr.save(update_fields=["status", "last_error", "updated_at"])
 
 
-def mark_dead(tr: TaskRecord, error: str) -> None:
-    """Mark a task as dead after retries exhausted.
+def mark_dead(tr: TaskRecord, error: str, *, actor=None) -> None:
+    """Mark a task as dead after retries exhausted; write audit log.
 
     Args:
         tr: TaskRecord to update.
         error: Final error message.
+        actor: User who triggered the event (None for system-triggered tasks).
     """
     tr.status = TaskRecord.Status.DEAD
     tr.last_error = error
     tr.save(update_fields=["status", "last_error", "updated_at"])
+    from audit.services import log as audit_log
+
+    audit_log(
+        tenant=tr.tenant,
+        actor=actor,
+        event="workflow.task.dead",
+        payload={
+            "task_record_id": tr.id,
+            "task_name": tr.task_name,
+            "error": error,
+        },
+    )
