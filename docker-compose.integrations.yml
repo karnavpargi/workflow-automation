@@ -1,0 +1,79 @@
+# docker-compose.integrations.yml
+#
+# Optional compose file for live integration adapter tests.
+#
+# This file brings up the free/OSS vendor services used by the
+# integrations adapters (SuiteCRM, Invoice Ninja, Nextcloud, Mattermost).
+# It does NOT replace the main docker-compose.yml (db, redis, web, worker,
+# beat, caddy, minio) — it adds the external vendors on top.
+#
+# MinIO is already provided by the main compose, so it is intentionally
+# not duplicated here.
+#
+# Usage:
+#
+#   # 1. Start the main app stack (db, redis, web, etc.)
+#   docker compose up -d
+#
+#   # 2. Start the integration vendors on top
+#   docker compose -f docker-compose.integrations.yml up -d
+#
+#   # 3. Run the live (real-vendor) adapter tests
+#   MAKE_REAL=1 pytest integrations/tests/ -m live
+#
+#   # 4. Tear down
+#   docker compose -f docker-compose.integrations.yml down
+#
+# Note: the `live` pytest marker is a future hook — once the integration
+# tests are tagged with `@pytest.mark.live`, the MAKE_REAL=1 env var
+# will gate the real-vendor test runs. Until then, the compose file is
+# the infrastructure side of that future hook.
+#
+# All images used here are free / open-source:
+#   - bitnami/suitecrm (free community edition image)
+#   - invoiceninja/invoiceninja (community-maintained official build)
+#   - nextcloud (official, AGPLv3)
+#   - mattermost/mattermost-team-edition (free Team Edition)
+#   - mysql:8 / postgres:16-alpine (free, dependency-only)
+
+services:
+  suitecrm:
+    image: bitnami/suitecrm:latest
+    environment:
+      SUITECRM_USERNAME: admin
+      SUITECRM_PASSWORD: admin
+    ports: ["8081:8080"]
+
+  invoiceninja:
+    image: invoiceninja/invoiceninja:latest
+    environment:
+      APP_URL: http://localhost:8082
+    ports: ["8082:80"]
+    depends_on: ["invoiceninja-db"]
+    links: ["invoiceninja-db"]
+  invoiceninja-db:
+    image: mysql:8
+    environment:
+      MYSQL_ROOT_PASSWORD: secret
+      MYSQL_DATABASE: ninja
+      MYSQL_USER: ninja
+      MYSQL_PASSWORD: secret
+    ports: ["3307:3306"]
+
+  nextcloud:
+    image: nextcloud:stable
+    ports: ["8083:80"]
+
+  mattermost:
+    image: mattermost/mattermost-team-edition:latest
+    environment:
+      MM_SQLSETTINGS_DRIVERNAME: postgres
+      MM_SQLSETTINGS_DATASOURCE: postgres://mmuser:mmpass@mattermost-db:5432/mattermost?sslmode=disable
+    ports: ["8084:8065"]
+    depends_on: ["mattermost-db"]
+  mattermost-db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: mmuser
+      POSTGRES_PASSWORD: mmpass
+      POSTGRES_DB: mattermost
