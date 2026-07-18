@@ -13,6 +13,9 @@ TENANT_SCOPED_TABLES = [
     "audit_auditlog",
     "workflows_event",
     "workflows_taskrecord",
+    "onboarding_client",
+    "onboarding_onboardingtemplate",
+    "onboarding_onboardingrun",
 ]
 
 
