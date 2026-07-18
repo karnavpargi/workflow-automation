@@ -14,8 +14,10 @@ def test_log_creates_immutable_entry() -> None:
 
     u = User.objects.create_user(email="a@x.io", password="p", username="a")
     t = tsvc.create_tenant(name="Acme", slug="acme", admin=u)
-    services.log(tenant=t, actor=u, event="tenant.created", payload={"slug": "acme"})
-    assert AuditLog.objects.filter(event="tenant.created").count() == 1
+    services.log(
+        tenant=t, actor=u, event="audit.manual.entry", payload={"slug": "acme"}
+    )
+    assert AuditLog.objects.filter(event="audit.manual.entry").count() == 1
 
 
 @pytest.mark.django_db
