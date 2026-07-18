@@ -8,6 +8,7 @@ handler for a given step + run pair.
 import logging
 
 from celery import shared_task
+from django.db.models import F
 
 from integrations.models import IntegrationConfig
 from onboarding.models import OnboardingRun, OnboardingStep
@@ -52,6 +53,7 @@ def run_step(self, step_id: int, run_id: int) -> None:
             raise
         countdown = 60 * (2**self.request.retries)
         raise self.retry(exc=exc, countdown=countdown) from exc
+    _mark_step_complete(run_id)
 
 
 def _welcome_email(step: OnboardingStep, run_id: int) -> None:
@@ -153,3 +155,22 @@ _STEP_HANDLERS = {
     OnboardingStep.Kind.DOC_REQUEST: _doc_request,
     OnboardingStep.Kind.SETUP_TASK: _setup_task,
 }
+
+
+def _mark_step_complete(run_id: int) -> None:
+    """Increment a run's ``completed_steps`` counter and finalize the run.
+
+    When ``completed_steps`` reaches ``total_steps`` the run's status
+    transitions to ``DONE``. Uses ``F()`` for the atomic increment so
+    concurrent step completions do not lose updates.
+
+    Args:
+        run_id: PK of the ``OnboardingRun`` to update.
+    """
+    OnboardingRun.objects.filter(pk=run_id).update(
+        completed_steps=F("completed_steps") + 1
+    )
+    run = OnboardingRun.objects.get(pk=run_id)
+    if run.total_steps > 0 and run.completed_steps >= run.total_steps:
+        run.status = OnboardingRun.Status.DONE
+        run.save(update_fields=["status"])

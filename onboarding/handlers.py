@@ -48,12 +48,15 @@ def start_onboarding(event):  # noqa: ANN001
         )
         return None
     with transaction.atomic():
+        steps = list(template.steps.all().order_by("order"))
         run = OnboardingRun.objects.create(
             tenant=event.tenant,
             client=client,
             template=template,
+            total_steps=len(steps),
+            status=OnboardingRun.Status.RUNNING,
         )
-        for step in template.steps.all().order_by("order"):
+        for step in steps:
             step_runners.run_step.apply_async(
                 args=[step.id, run.id],
                 countdown=step.delay_seconds,

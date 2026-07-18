@@ -83,6 +83,8 @@ class OnboardingRun(models.Model):
         client: Target client.
         template: Template used.
         status: pending | running | done | failed.
+        total_steps: Number of steps in the template at run time.
+        completed_steps: Number of steps whose handler has succeeded.
     """
 
     class Status(models.TextChoices):
@@ -99,4 +101,6 @@ class OnboardingRun(models.Model):
     status = models.CharField(
         max_length=10, choices=Status.choices, default=Status.PENDING
     )
+    total_steps = models.PositiveIntegerField(default=0)
+    completed_steps = models.PositiveIntegerField(default=0)
     created_at = models.DateTimeField(auto_now_add=True)

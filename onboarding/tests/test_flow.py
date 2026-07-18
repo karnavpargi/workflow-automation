@@ -25,6 +25,7 @@ def test_full_onboarding_flow_sends_welcome_email_and_dispatches_steps(settings)
     from integrations.models import IntegrationConfig
     from onboarding import services
     from onboarding.models import (
+        OnboardingRun,
         OnboardingStep,
         OnboardingTemplate,
     )
@@ -83,6 +84,10 @@ def test_full_onboarding_flow_sends_welcome_email_and_dispatches_steps(settings)
     welcome = next(m for m in mail.outbox if "Welcome" in m.subject)
     assert "client@acme.io" in welcome.to
 
+    run = OnboardingRun.objects.get(template=template)
+    assert run.total_steps == 3
+    assert run.status == OnboardingRun.Status.DONE
+
 
 @pytest.mark.django_db(transaction=True)
 def test_full_onboarding_flow_creates_run_and_storage_put(settings):
@@ -123,10 +128,6 @@ def test_full_onboarding_flow_creates_run_and_storage_put(settings):
 
     run = OnboardingRun.objects.get(template=template)
     assert run.client.name == "Acme"
-    assert run.status in {
-        OnboardingRun.Status.PENDING,
-        OnboardingRun.Status.RUNNING,
-        OnboardingRun.Status.DONE,
-    }
+    assert run.status == OnboardingRun.Status.DONE
     setup_records = TaskRecord.objects.filter(task_name__startswith="onboarding.setup:")
     assert setup_records.count() == 1
