@@ -30,6 +30,7 @@ INSTALLED_APPS = [
     "users",
     "audit",
     "workflows",
+    "integrations",
 ]
 
 MIDDLEWARE = [
