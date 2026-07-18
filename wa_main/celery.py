@@ -1,4 +1,5 @@
 """Celery application factory for the workflow-automation project."""
+
 import os
 
 from celery import Celery

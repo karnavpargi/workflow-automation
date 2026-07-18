@@ -1,4 +1,5 @@
 """App config for tenants."""
+
 from django.apps import AppConfig
 
 

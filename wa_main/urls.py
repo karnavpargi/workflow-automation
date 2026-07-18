@@ -1,4 +1,5 @@
 """Root URL configuration; app routers are included per app."""
+
 from django.contrib import admin
 from django.urls import include, path
 

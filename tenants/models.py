@@ -54,6 +54,8 @@ class Membership(models.Model):
     role = models.CharField(max_length=10, choices=Role.choices, default=Role.MEMBER)
 
     class Meta:
+        """Membership model metadata."""
+
         constraints = [
             models.UniqueConstraint(fields=["tenant", "user"], name="uniq_tenant_user"),
         ]

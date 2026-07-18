@@ -7,13 +7,14 @@ directly, so multi-tenancy invariants stay in one place.
 from django.db import transaction
 
 from tenants.models import Membership, Tenant
+from users.models import User
 
 
 class TenantSlugTaken(Exception):
     """Raised when creating a tenant with a slug already in use."""
 
 
-def create_tenant(*, name: str, slug: str, admin) -> Tenant:
+def create_tenant(*, name: str, slug: str, admin: User) -> Tenant:
     """Create a tenant and add ``admin`` as its first ADMIN member.
 
     Args:

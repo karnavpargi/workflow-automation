@@ -34,4 +34,6 @@ class AuditLog(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
+        """AuditLog model metadata."""
+
         indexes = [models.Index(fields=["tenant", "event"])]

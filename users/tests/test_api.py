@@ -7,7 +7,7 @@ from tenants import services
 
 
 @pytest.mark.django_db
-def test_obtain_token_returns_access_and_refresh():
+def test_obtain_token_returns_access_and_refresh() -> None:
     """Valid email/password returns two tokens and 200."""
     from users.models import User
 
@@ -24,7 +24,7 @@ def test_obtain_token_returns_access_and_refresh():
 
 
 @pytest.mark.django_db
-def test_obtain_token_wrong_password_401():
+def test_obtain_token_wrong_password_401() -> None:
     """Wrong password returns 401."""
     from users.models import User
 

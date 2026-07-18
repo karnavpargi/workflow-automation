@@ -27,12 +27,32 @@ dev = [
 [tool.ruff]
 line-length = 88
 target-version = "py312"
+extend-exclude = ["**/migrations/**"]
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "B", "UP", "SIM", "C4"]
 
 [tool.black]
 line-length = 88
 target-version = ["py312"]
+extend-exclude = '''
+/(
+    \.eggs
+  | \.git
+  | \.hg
+  | \.mypy_cache
+  | \.nox
+  | \.pants\.d
+  | \.svn
+  | \.tox
+  | \.venv
+  | _build
+  | buck-out
+  | build
+  | dist
+  | migrations
+  | node_modules
+)/
+'''
 
 [tool.pydocstyle]
 convention = "google"
@@ -43,6 +63,8 @@ python_version = "3.12"
 strict = true
 exclude = ["migrations/"]
 plugins = ["mypy_django_plugin.main", "mypy_drf_plugin.main"]
+
+[tool.django-stubs]
 django_settings_module = "wa_main.settings.test"
 
 [[tool.mypy.overrides]]

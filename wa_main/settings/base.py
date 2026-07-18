@@ -3,6 +3,7 @@
 All environment-specific values are read via :func:`os.environ` so the same
 settings module can run inside Docker and on a developer laptop.
 """
+
 import os
 from pathlib import Path
 
@@ -76,9 +77,7 @@ REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": (
         "rest_framework_simplejwt.authentication.JWTAuthentication",
     ),
-    "DEFAULT_PERMISSION_CLASSES": (
-        "rest_framework.permissions.IsAuthenticated",
-    ),
+    "DEFAULT_PERMISSION_CLASSES": ("rest_framework.permissions.IsAuthenticated",),
 }
 
 from datetime import timedelta  # noqa: E402

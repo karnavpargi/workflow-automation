@@ -1,0 +1,51 @@
+name: CI
+on:
+  pull_request:
+  push: { branches: [main] }
+
+jobs:
+  lint-type-test:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: wa_test
+          POSTGRES_USER: wa
+          POSTGRES_PASSWORD: wa
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U wa"
+          --health-interval 5s --health-timeout 3s --health-retries 10
+      redis:
+        image: redis:7-alpine
+        ports: ["6379:6379"]
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -e ".[dev]"
+      - run: ruff check .
+      - run: black --check .
+      - run: pydocstyle
+      - run: mypy tenants users audit
+      - run: python manage.py migrate
+        env:
+          DJANGO_SETTINGS_MODULE: wa_main.settings.test
+          DB_HOST: localhost
+          DB_NAME: wa_test
+          DB_USER: wa
+          DB_PASSWORD: wa
+          DJANGO_SECRET_KEY: ci-secret
+      - run: pytest -v
+        env:
+          DJANGO_SETTINGS_MODULE: wa_main.settings.test
+          DB_HOST: localhost
+          DB_NAME: wa_test
+          DB_USER: wa
+          DB_PASSWORD: wa
+          DJANGO_SECRET_KEY: ci-secret
+          CELERY_BROKER_URL: redis://localhost:6379/0
+          CELERY_RESULT_BACKEND: redis://localhost:6379/1

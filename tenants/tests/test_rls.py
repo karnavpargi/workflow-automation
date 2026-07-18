@@ -5,7 +5,7 @@ from django.db import connection
 
 
 @pytest.mark.django_db
-def test_rls_blocks_cross_tenant_select():
+def test_rls_blocks_cross_tenant_select() -> None:
     """With SET LOCAL app.tenant_id and policies enabled, only own rows return."""
     with connection.cursor() as cur:
         cur.execute(

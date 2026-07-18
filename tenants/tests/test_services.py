@@ -6,7 +6,7 @@ from tenants import services
 
 
 @pytest.mark.django_db
-def test_create_tenant_adds_admin():
+def test_create_tenant_adds_admin() -> None:
     """Creating a tenant also creates an ADMIN membership for the creator."""
     from users.models import User
 
@@ -17,7 +17,7 @@ def test_create_tenant_adds_admin():
 
 
 @pytest.mark.django_db
-def test_create_tenant_slug_must_be_unique():
+def test_create_tenant_slug_must_be_unique() -> None:
     """Duplicate slug raises a typed error."""
     from users.models import User
 
@@ -28,7 +28,7 @@ def test_create_tenant_slug_must_be_unique():
 
 
 @pytest.mark.django_db
-def test_create_tenant_writes_audit():
+def test_create_tenant_writes_audit() -> None:
     from audit.models import AuditLog
     from users.models import User
 

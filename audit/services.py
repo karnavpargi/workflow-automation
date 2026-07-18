@@ -5,9 +5,17 @@ calls from other apps so the append-only invariant stays in one place.
 """
 
 from audit.models import AuditLog
+from tenants.models import Tenant
+from users.models import User
 
 
-def log(*, tenant, actor, event: str, payload: dict | None = None) -> AuditLog:
+def log(
+    *,
+    tenant: Tenant,
+    actor: User | None,
+    event: str,
+    payload: dict[str, object] | None = None,
+) -> AuditLog:
     """Append an audit entry.
 
     Args:

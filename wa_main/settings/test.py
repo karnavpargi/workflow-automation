@@ -1,4 +1,7 @@
 """Test settings: in-memory-ish Postgres via env, eager Celery."""
+
+import os
+
 from wa_main.settings.base import *  # noqa: F401,F403
 
 CELERY_TASK_ALWAYS_EAGER = True

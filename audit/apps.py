@@ -1,4 +1,5 @@
 """App config for audit."""
+
 from django.apps import AppConfig
 
 
