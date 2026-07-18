@@ -11,10 +11,16 @@ from invoices.services import issue_invoice_from_schedule
 
 logger = logging.getLogger(__name__)
 
+MAX_CONSECUTIVE_FAILURES = 3
+
 
 @shared_task
 def check_recurring_invoices() -> int:
     """Issue invoices for due recurring schedules; advance next_run.
+
+    On failure, increment ``consecutive_failures``; after
+    ``MAX_CONSECUTIVE_FAILURES`` failures in a row, disable the schedule
+    and emit a critical log. On success, reset the counter.
 
     Returns:
         Number of invoices issued.
@@ -27,13 +33,24 @@ def check_recurring_invoices() -> int:
             issue_invoice_from_schedule(sched)
             count += 1
         except Exception as exc:  # noqa: BLE001
-            logger.exception(
-                "Failed to issue invoice for schedule %s: %s", sched.id, exc
-            )
+            sched.consecutive_failures += 1
+            if sched.consecutive_failures >= MAX_CONSECUTIVE_FAILURES:
+                sched.is_active = False
+                logger.critical(
+                    "Recurring schedule %s disabled after %d consecutive failures",
+                    sched.id,
+                    sched.consecutive_failures,
+                )
+            else:
+                logger.exception(
+                    "Failed to issue invoice for schedule %s: %s", sched.id, exc
+                )
+        else:
+            sched.consecutive_failures = 0
         # Advance next_run regardless of success (avoid infinite retries)
         if sched.cadence == "monthly":
             sched.next_run = today + timedelta(days=30)
         elif sched.cadence == "weekly":
             sched.next_run = today + timedelta(days=7)
-        sched.save(update_fields=["next_run"])
+        sched.save(update_fields=["next_run", "consecutive_failures", "is_active"])
     return count

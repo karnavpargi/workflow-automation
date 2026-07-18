@@ -104,6 +104,7 @@ class RecurringSchedule(models.Model):
     cadence = models.CharField(max_length=10, choices=Cadence.choices)
     next_run = models.DateField()
     is_active = models.BooleanField(default=True)
+    consecutive_failures = models.PositiveIntegerField(default=0)
 
     def save(self, *args, **kwargs):
         """Default ``next_run`` to today if not set on create."""
