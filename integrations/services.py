@@ -36,4 +36,8 @@ def get_adapter(tenant, kind: str):
         from integrations.storage.minio_client import MinioStorageAdapter
 
         return MinioStorageAdapter(cfg.credentials)
+    if kind == IntegrationConfig.Kind.BILLING:
+        from integrations.billing.invoice_ninja import InvoiceNinjaBillingAdapter
+
+        return InvoiceNinjaBillingAdapter(cfg.credentials)
     raise AdapterNotConfigured(kind)
