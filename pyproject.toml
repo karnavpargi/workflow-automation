@@ -87,6 +87,11 @@ DJANGO_SETTINGS_MODULE = "wa_main.settings.test"
 python_files = ["test_*.py"]
 addopts = "-ra --strict-markers"
 
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["tenants*", "users*", "audit*", "wa_main*", "workflows*"]
+exclude = ["tests*", "docs*", "docker*", "**/migrations*", "**/tests*"]
+
 [build-system]
 requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"
