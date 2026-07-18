@@ -6,8 +6,8 @@ from workflows import registry, services
 from workflows.exceptions import PermanentError
 from workflows.models import TaskRecord
 
-MAX_RETRIES = 3
-BACKOFF = {0: 60, 1: 300, 2: 1800}  # seconds
+MAX_RETRIES = 4  # initial attempt + 3 retries (60s, 5min, 30min)
+BACKOFF = {0: 60, 1: 300, 2: 1800}  # seconds; 3 backoffs for 3 retries
 
 
 @shared_task(bind=True, max_retries=MAX_RETRIES)
