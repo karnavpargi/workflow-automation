@@ -47,7 +47,11 @@ class TaskRecord(models.Model):
         "tenants.Tenant", on_delete=models.CASCADE, related_name="task_records"
     )
     event = models.ForeignKey(
-        Event, on_delete=models.CASCADE, related_name="task_records"
+        Event,
+        on_delete=models.CASCADE,
+        related_name="task_records",
+        null=True,
+        blank=True,
     )
     task_name = models.CharField(max_length=200)
     idempotency_key = models.CharField(max_length=300, unique=True)
