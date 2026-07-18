@@ -12,6 +12,7 @@ dependencies = [
   "python-dotenv>=1.0",
   "minio>=7.2",
   "httpx>=0.27",
+  "reportlab>=4.0",
 ]
 
 [project.optional-dependencies]
@@ -94,7 +95,7 @@ addopts = "-ra --strict-markers"
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["tenants*", "users*", "audit*", "wa_main*", "workflows*", "integrations*", "onboarding*"]
+include = ["tenants*", "users*", "audit*", "wa_main*", "workflows*", "integrations*", "onboarding*", "invoices*", "followups*"]
 exclude = ["tests*", "docs*", "docker*", "**/migrations*", "**/tests*"]
 
 [build-system]

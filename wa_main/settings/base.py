@@ -32,6 +32,8 @@ INSTALLED_APPS = [
     "workflows",
     "integrations",
     "onboarding",
+    "invoices",
+    "followups",
 ]
 
 MIDDLEWARE = [
@@ -97,6 +99,12 @@ SIMPLE_JWT = {
 CELERY_BROKER_URL = os.environ.get("CELERY_BROKER_URL", "redis://redis:6379/0")
 CELERY_RESULT_BACKEND = os.environ.get("CELERY_RESULT_BACKEND", "redis://redis:6379/1")
 CELERY_TASK_ALWAYS_EAGER = False
+CELERY_BEAT_SCHEDULE = {
+    "invoices-check-recurring": {
+        "task": "invoices.tasks.check_recurring_invoices",
+        "schedule": "0 0 * * *",  # daily at 00:00 UTC
+    },
+}
 
 LANGUAGE_CODE = "en-us"
 TIME_ZONE = "UTC"
