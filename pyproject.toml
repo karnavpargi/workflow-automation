@@ -30,7 +30,7 @@ dev = [
 [tool.ruff]
 line-length = 88
 target-version = "py312"
-extend-exclude = ["**/migrations/**"]
+extend-exclude = ["**/migrations/**", "*.yml", "*.yaml"]
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "B", "UP", "SIM", "C4"]
 
@@ -54,6 +54,8 @@ extend-exclude = '''
   | dist
   | migrations
   | node_modules
+  | \.yml
+  | \.yaml
 )/
 '''
 
