@@ -31,25 +31,37 @@ jobs:
       - run: black --check .
       - run: pydocstyle
       - run: mypy tenants users audit
+      - name: Install psql and configure non-superuser app role
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client
+          PGPASSWORD=wa psql -v ON_ERROR_STOP=1 -h localhost -U wa -d wa_test <<'SQL'
+          DO $$
+          BEGIN
+            IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'wa_app') THEN
+              CREATE ROLE wa_app WITH LOGIN PASSWORD 'wa' CREATEDB NOSUPERUSER NOCREATEROLE NOBYPASSRLS;
+            ELSE
+              ALTER ROLE wa_app WITH LOGIN PASSWORD 'wa' CREATEDB NOSUPERUSER NOCREATEROLE NOBYPASSRLS;
+            END IF;
+          END
+          $$;
+          GRANT ALL PRIVILEGES ON DATABASE wa_test TO wa_app;
+          GRANT USAGE, CREATE ON SCHEMA public TO wa_app;
+          SQL
       - run: python manage.py migrate
         env:
           DJANGO_SETTINGS_MODULE: wa_main.settings.test
           DB_HOST: localhost
           DB_NAME: wa_test
-          DB_USER: wa
+          DB_USER: wa_app
           DB_PASSWORD: wa
           DJANGO_SECRET_KEY: ci-secret
-      - name: Install psql and downgrade wa role
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y postgresql-client
-          PGPASSWORD=wa psql -h localhost -U wa -d wa_test -c "ALTER USER wa NOSUPERUSER;"
       - run: pytest -v
         env:
           DJANGO_SETTINGS_MODULE: wa_main.settings.test
           DB_HOST: localhost
           DB_NAME: wa_test
-          DB_USER: wa
+          DB_USER: wa_app
           DB_PASSWORD: wa
           DJANGO_SECRET_KEY: ci-secret
           CELERY_BROKER_URL: redis://localhost:6379/0
