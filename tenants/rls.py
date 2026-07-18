@@ -16,6 +16,8 @@ TENANT_SCOPED_TABLES = [
     "onboarding_client",
     "onboarding_onboardingtemplate",
     "onboarding_onboardingrun",
+    "invoices_invoice",
+    "invoices_recurringschedule",
 ]
 
 
