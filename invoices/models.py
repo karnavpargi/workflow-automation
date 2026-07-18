@@ -1,6 +1,7 @@
 """Invoice models."""
 
 from decimal import Decimal
+from typing import Any
 
 from django.db import models
 
@@ -50,7 +51,7 @@ class Invoice(models.Model):
             ),
         ]
 
-    def save(self, *args, **kwargs):
+    def save(self, *args: Any, **kwargs: Any) -> None:
         """Recompute ``total`` from line items on every save after creation.
 
         LineItems FK the Invoice, so the Invoice must be saved before any
@@ -110,7 +111,7 @@ class RecurringSchedule(models.Model):
     is_active = models.BooleanField(default=True)
     consecutive_failures = models.PositiveIntegerField(default=0)
 
-    def save(self, *args, **kwargs):
+    def save(self, *args: Any, **kwargs: Any) -> None:
         """Default ``next_run`` to today if not set on create."""
         from django.utils import timezone
 
