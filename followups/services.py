@@ -1,6 +1,6 @@
 """Follow-up services.
 
-Two public functions:
+Three public functions:
   * :func:`schedule_invoice_reminder` is the Plan 5 hook called by
     :func:`invoices.services.issue_invoice`. It creates a PENDING
     :class:`~followups.models.Reminder` 7 days before the invoice due
@@ -9,6 +9,11 @@ Two public functions:
     scans all due PENDING reminders, sends them through the active
     :class:`~integrations.base.EmailAdapter`, marks them SENT, and
     appends a ``followup.sent`` audit entry.
+  * :func:`create_draft_reminder` is the Plan 9 HITL hook called by
+    the AI service's FollowupDraftingAgent. It stores an LLM-proposed
+    message in ``DRAFT`` status for human review.
+  * :func:`approve_draft` flips a DRAFT reminder back to PENDING so it
+    flows through the normal send path.
 """
 
 from datetime import datetime, timedelta
@@ -46,6 +51,61 @@ def schedule_invoice_reminder(invoice) -> object:
     )
 
 
+def create_draft_reminder(
+    *,
+    tenant,
+    subject: str,
+    recipient_email: str,
+    invoice_number: str,
+    due_date_iso: str,
+    draft_text: str,
+    due_at=None,
+) -> Reminder:
+    """Persist an LLM-drafted reminder in ``DRAFT`` status.
+
+    Args:
+        tenant: Owning tenant.
+        subject: Reminder subject.
+        recipient_email: Recipient address.
+        invoice_number: Invoice reference for context.
+        due_date_iso: ISO date string for context.
+        draft_text: The LLM-proposed message body.
+        due_at: Optional explicit due datetime. Defaults to ``now``.
+
+    Returns:
+        Created :class:`Reminder` in ``DRAFT`` status.
+    """
+    return Reminder.objects.create(
+        tenant=tenant,
+        subject=subject,
+        due_at=due_at or timezone.now(),
+        recipient_email=recipient_email,
+        status=Reminder.Status.DRAFT,
+        draft_text=draft_text,
+        context={
+            "subject": subject,
+            "due_date": due_date_iso,
+            "number": invoice_number,
+        },
+    )
+
+
+def approve_draft(reminder: Reminder) -> Reminder:
+    """Flip a ``DRAFT`` reminder to ``PENDING`` for the send path.
+
+    Args:
+        reminder: Reminder in ``DRAFT`` status.
+
+    Returns:
+        The updated reminder.
+    """
+    if reminder.status != Reminder.Status.DRAFT:
+        return reminder
+    reminder.status = Reminder.Status.PENDING
+    reminder.save(update_fields=["status"])
+    return reminder
+
+
 def process_due_reminders() -> int:
     """Send every PENDING reminder whose ``due_at`` has passed.
 
@@ -65,7 +125,7 @@ def process_due_reminders() -> int:
             body = (
                 rem.rule.template.format(**rem.context)
                 if rem.rule
-                else f"Reminder: {rem.subject}"
+                else rem.draft_text or f"Reminder: {rem.subject}"
             )
             email = get_adapter(rem.tenant, IntegrationConfig.Kind.EMAIL)
             email.send(

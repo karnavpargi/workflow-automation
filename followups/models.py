@@ -56,8 +56,15 @@ class Reminder(models.Model):
     """
 
     class Status(models.TextChoices):
-        """Reminder lifecycle."""
+        """Reminder lifecycle.
 
+        ``DRAFT`` is set by the AI service when an LLM has proposed
+        message text that still needs human-in-the-loop review. Admins
+        approve the draft (flip to ``PENDING``) or reject (flip to
+        ``CANCELLED``).
+        """
+
+        DRAFT = "draft", "Draft"
         PENDING = "pending", "Pending"
         SENT = "sent", "Sent"
         CANCELLED = "cancelled", "Cancelled"
@@ -79,4 +86,9 @@ class Reminder(models.Model):
         max_length=12, choices=Status.choices, default=Status.PENDING
     )
     context = models.JSONField(default=dict)
+    draft_text = models.TextField(
+        blank=True,
+        default="",
+        help_text="LLM-proposed message text awaiting HITL review.",
+    )
     created_at = models.DateTimeField(auto_now_add=True)
