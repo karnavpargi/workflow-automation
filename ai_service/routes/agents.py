@@ -67,3 +67,32 @@ def extract_document_endpoint(body: ExtractDocumentRequest) -> dict:
         embeddings=get_embeddings(),
     )
     return {"text": text, "chunks": chunks}
+
+
+class DraftFollowupRequest(BaseModel):
+    """Request body for the followup-draft agent."""
+
+    tenant_id: int
+    invoice_number: str
+    due_date: str
+    recipient_email: str
+
+
+@router.post("/draft-followup", status_code=201)
+def draft_followup_endpoint(body: DraftFollowupRequest) -> dict:
+    """Generate a follow-up draft and persist it as a DRAFT Reminder.
+
+    Args:
+        body: Request payload.
+
+    Returns:
+        ``{"reminder_id": int, "draft_text": str}``.
+    """
+    from ai_service.agents import followup_draft
+
+    return followup_draft.draft_followup(
+        tenant_id=body.tenant_id,
+        invoice_number=body.invoice_number,
+        due_date_iso=body.due_date,
+        recipient_email=body.recipient_email,
+    )
