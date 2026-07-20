@@ -8,4 +8,5 @@ urlpatterns = [
     path("api/auth/", include("users.urls")),
     path("api/", include("onboarding.urls")),
     path("api/", include("invoices.urls")),
+    path("api/", include("followups.urls")),
 ]

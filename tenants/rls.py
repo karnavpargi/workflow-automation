@@ -18,6 +18,8 @@ TENANT_SCOPED_TABLES = [
     "onboarding_onboardingrun",
     "invoices_invoice",
     "invoices_recurringschedule",
+    "followups_followuprule",
+    "followups_reminder",
 ]
 
 
