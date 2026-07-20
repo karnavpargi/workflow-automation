@@ -18,8 +18,9 @@ def mock_presidio():
     anonymized = MagicMock()
     anonymized.text = "REDACTED"
     fake_anonymizer.anonymize.return_value = anonymized
-    with patch("ai_service.safety.pii._analyzer", fake_analyzer), patch(
-        "ai_service.safety.pii._anonymizer", fake_anonymizer
+    with (
+        patch("ai_service.safety.pii._analyzer", fake_analyzer),
+        patch("ai_service.safety.pii._anonymizer", fake_anonymizer),
     ):
         yield fake_analyzer, fake_anonymizer
 
