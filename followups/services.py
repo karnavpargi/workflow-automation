@@ -93,6 +93,11 @@ def create_draft_reminder(
 def approve_draft(reminder: Reminder) -> Reminder:
     """Flip a ``DRAFT`` reminder to ``PENDING`` for the send path.
 
+    On a successful DRAFT → PENDING transition, the reminder's
+    ``draft_text`` is recorded as a :class:`SuccessfulFollowup` so the
+    AI service's RAG helper (``retrieve_examples``) can use it as a
+    positive example when drafting the next follow-up.
+
     Args:
         reminder: Reminder in ``DRAFT`` status.
 
@@ -103,6 +108,14 @@ def approve_draft(reminder: Reminder) -> Reminder:
         return reminder
     reminder.status = Reminder.Status.PENDING
     reminder.save(update_fields=["status"])
+    if reminder.draft_text:
+        from followups.models import SuccessfulFollowup
+
+        SuccessfulFollowup.objects.create(
+            tenant=reminder.tenant,
+            reminder=reminder,
+            draft_text=reminder.draft_text,
+        )
     return reminder
 
 

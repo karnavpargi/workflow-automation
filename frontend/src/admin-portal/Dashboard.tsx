@@ -13,7 +13,6 @@ export function Dashboard() {
   const { data, isLoading, error } = useQuery<Counts>({
     queryKey: ["dashboard"],
     queryFn: () => api.get<Counts>("/api/dashboard/"),
-    enabled: false, // backend summary endpoint not yet shipped; UI renders
   });
   const columns: Column<[string, number]>[] = [
     { key: "label", header: "Metric", render: (r) => r[0] },

@@ -85,6 +85,24 @@ def test_draft_followup_endpoint_returns_draft():
     client = TestClient(app)
     t = _tenant()
 
+    from datetime import UTC, datetime, timedelta
+
+    from jose import jwt
+
+    from ai_service.config import settings
+
+    now = datetime.now(UTC)
+    token = jwt.encode(
+        {
+            "user_id": 1,
+            "tenant_id": t.id,
+            "iat": int(now.timestamp()),
+            "exp": int((now + timedelta(minutes=5)).timestamp()),
+        },
+        settings.jwt_secret,
+        algorithm="HS256",
+    )
+
     with (
         patch(
             "ai_service.agents.followup_draft.retrieve_examples",
@@ -103,6 +121,7 @@ def test_draft_followup_endpoint_returns_draft():
                 "due_date": "2026-12-31",
                 "recipient_email": "a@acme.io",
             },
+            headers={"Authorization": f"Bearer {token}"},
         )
 
     assert r.status_code == 201, f"{r.status_code} {r.text}"

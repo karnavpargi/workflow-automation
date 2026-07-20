@@ -119,11 +119,26 @@ def test_email_parse_graph_redacts_output_pii():
 
 def test_email_parse_route_returns_201_for_valid_payload():
     """The /agents/email-parse endpoint returns the parsed fields."""
-    from fastapi.testclient import TestClient
+    from datetime import UTC, datetime, timedelta
 
+    from fastapi.testclient import TestClient
+    from jose import jwt
+
+    from ai_service.config import settings
     from ai_service.main import app
 
     client = TestClient(app)
+    now = datetime.now(UTC)
+    token = jwt.encode(
+        {
+            "user_id": 1,
+            "tenant_id": 1,
+            "iat": int(now.timestamp()),
+            "exp": int((now + timedelta(minutes=5)).timestamp()),
+        },
+        settings.jwt_secret,
+        algorithm="HS256",
+    )
 
     with patch(
         "ai_service.agents.email_parse.get_chat_model",
@@ -131,7 +146,11 @@ def test_email_parse_route_returns_201_for_valid_payload():
             {"category": "contact", "summary": "Lead", "email": "x@y.io"}
         ),
     ):
-        r = client.post("/agents/email-parse", json={"raw": "hello there"})
+        r = client.post(
+            "/agents/email-parse",
+            json={"raw": "hello there"},
+            headers={"Authorization": f"Bearer {token}"},
+        )
 
     assert r.status_code == 201, r.text
     body = r.json()

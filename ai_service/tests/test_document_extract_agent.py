@@ -84,12 +84,30 @@ def test_extract_document_endpoint_returns_extracted_fields():
             return_value=MagicMock(),
         ),
     ):
+        from datetime import UTC, datetime, timedelta
+
+        from jose import jwt
+
+        from ai_service.config import settings
+
+        now = datetime.now(UTC)
+        token = jwt.encode(
+            {
+                "user_id": 1,
+                "tenant_id": 1,
+                "iat": int(now.timestamp()),
+                "exp": int((now + timedelta(minutes=5)).timestamp()),
+            },
+            settings.jwt_secret,
+            algorithm="HS256",
+        )
         r = client.post(
             "/agents/extract-document",
             json={
                 "content_b64": "U29tZSBkb2N1bWVudCB0ZXh0Lg==",
                 "content_type": "text/plain",
             },
+            headers={"Authorization": f"Bearer {token}"},
         )
 
     assert r.status_code == 201, r.text

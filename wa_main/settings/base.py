@@ -36,6 +36,7 @@ INSTALLED_APPS = [
     "followups",
     "dataentry",
     "ai_audit",
+    "dashboard",
 ]
 
 MIDDLEWARE = [

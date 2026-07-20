@@ -10,20 +10,28 @@ from followups.services import create_draft_reminder  # noqa: F401  (re-export)
 
 
 def retrieve_examples(tenant_id: int, *, k: int = 3) -> list[str]:
-    """Pull the top-k positive follow-up examples for ``tenant_id``.
+    """Pull the top-k most-recent successful follow-up texts for ``tenant_id``.
 
-    This is a thin wrapper over a pgvector similarity search. The MVP
-    returns an empty list; a future PR wires the actual retrieval
-    against the tenant-scoped collection.
+    Reads from the ``followups_successfulfollowup`` table (RLS-protected
+    at the DB level — the agent's query is automatically scoped to the
+    caller's tenant when RLS is on, and the explicit ``tenant=tenant_id``
+    filter is the in-Python safety net for the test path where RLS
+    is disabled).
 
     Args:
         tenant_id: Owning tenant PK.
         k: Number of examples to return.
 
     Returns:
-        A list of past follow-up texts (newest first by relevance).
+        A list of past follow-up texts, newest first.
     """
-    return []
+    from followups.models import SuccessfulFollowup
+
+    return list(
+        SuccessfulFollowup.objects.filter(tenant_id=tenant_id)
+        .order_by("-sent_at")
+        .values_list("draft_text", flat=True)[:k]
+    )
 
 
 def draft_followup(
