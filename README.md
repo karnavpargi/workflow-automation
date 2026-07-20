@@ -121,14 +121,46 @@ This platform replaces those manual workflows with event-driven automation that 
 
 ### Planned (Not Yet Implemented)
 
-| Layer | Technology |
-|-------|-----------|
-| Frontend | React + Vite |
-| AI Framework | LangChain + LangGraph |
-| LLM Providers | OpenAI (primary) → Ollama (fallback) |
-| Vector Store | pgvector on PostgreSQL |
-| AI Observability | LangSmith Developer (free tier) |
-| AI Service | FastAPI microservice |
+> All 11 plans are now shipped. The "free/OSS by default" stance holds
+> across every layer — see [Free/OSS default path](#-freeoss-default-path)
+> below for the smoke checklist.
+
+### 🆓 Free/OSS default path
+
+The full stack runs on free/OSS software with **zero paid API keys**:
+
+| Layer | Free/OSS choice | Opt-in (paid) |
+|---|---|---|
+| LLM | Ollama (`llama3.1` / `qwen2.5`) | OpenAI (`AI_ENABLE_OPENAI=1`) |
+| Embeddings | HuggingFace `BAAI/bge-small-en` (local) | OpenAI embeddings |
+| Tracing | (off by default) | LangSmith free Developer tier |
+| Vector DB | pgvector on Postgres | — |
+| Chat | Mattermost (self-hosted) | — |
+| Storage | MinIO (self-hosted) | — |
+| Monitoring | Prometheus + Grafana OSS | — |
+| Linting / Testing | ruff, black, pydocstyle, mypy, pytest, Vitest, Playwright | — |
+| Frontend | React 18 + Vite 5 + React Router 6 + TanStack Query 5 | — |
+| Load testing | Locust | — |
+| PII redaction | Presidio (MIT) | — |
+
+Bring up the optional observability profile with:
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.ops.yml up -d
+```
+
+Final smoke (all 11 plans green):
+
+```bash
+# Backend
+pytest -q
+# Frontend
+cd frontend && npm test && npm run build
+# Load smoke
+locust -f ops/locust/locustfile.py -u 10 -r 2 -t 1m --headless
+# Nightly eval
+python ops/eval/run_nightly.py
+```
 
 ---
 ## 🏗️ System Architecture
