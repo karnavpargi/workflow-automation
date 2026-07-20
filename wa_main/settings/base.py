@@ -98,11 +98,17 @@ SIMPLE_JWT = {
 
 CELERY_BROKER_URL = os.environ.get("CELERY_BROKER_URL", "redis://redis:6379/0")
 CELERY_RESULT_BACKEND = os.environ.get("CELERY_RESULT_BACKEND", "redis://redis:6379/1")
+from celery.schedules import crontab  # noqa: E402
+
 CELERY_TASK_ALWAYS_EAGER = False
 CELERY_BEAT_SCHEDULE = {
     "invoices-check-recurring": {
         "task": "invoices.tasks.check_recurring_invoices",
         "schedule": "0 0 * * *",  # daily at 00:00 UTC
+    },
+    "followups-process-due": {
+        "task": "followups.tasks.process_due_reminders_task",
+        "schedule": crontab(minute=0),  # hourly
     },
 }
 
