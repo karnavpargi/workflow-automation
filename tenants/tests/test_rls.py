@@ -31,8 +31,9 @@ def test_rls_blocks_cross_tenant_select() -> None:
     # Step 1: insert with RLS off (session fixture ensures this).
     with connection.cursor() as cur:
         cur.execute(
-            "INSERT INTO tenants_tenant (name, slug, created_at, is_active) "
-            "VALUES ('A','a',now(),true),('B','b',now(),true) "
+            "INSERT INTO tenants_tenant "
+            "(name, slug, created_at, is_active, webhook_secret) "
+            "VALUES ('A','a',now(),true,''),('B','b',now(),true,'') "
             "RETURNING id"
         )
         inserted_ids = [r[0] for r in cur.fetchall()]
