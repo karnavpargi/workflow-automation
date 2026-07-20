@@ -8,6 +8,9 @@ __pycache__/
 *$py.class
 *.egg-info/
 .pytest_cache/
+
+# Ops
+ops/eval/last_ok
 .mypy_cache/
 .ruff_cache/
 .venv/
