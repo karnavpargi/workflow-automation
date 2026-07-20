@@ -1,15 +1,35 @@
-"""Placeholder for the agents router (Plan 9 implements the endpoints)."""
+"""LangGraph agents wired as FastAPI routes.
+
+Mounted under ``/agents`` in :mod:`ai_service.main`.
+"""
 
 from fastapi import APIRouter
+from pydantic import BaseModel
+
+from ai_service.agents import email_parse
 
 router = APIRouter()
 
 
-@router.get("/_stub")
-def agents_stub() -> dict[str, str]:
-    """Plan 9 will replace this with the agent execution endpoints.
+class EmailParseRequest(BaseModel):
+    """Request body for the email-parse agent."""
+
+    raw: str
+
+
+@router.post("/email-parse", status_code=201)
+def email_parse_endpoint(body: EmailParseRequest) -> dict:
+    """Parse ``body.raw`` into structured email fields.
+
+    Args:
+        body: Request payload.
 
     Returns:
-        Static stub response.
+        ``{"result": ..., "guard_reasons": [...]}``.
     """
-    return {"status": "stub", "plan": "9"}
+    graph = email_parse.build_email_parse_graph()
+    out = graph.invoke({"raw": body.raw})
+    return {
+        "result": out.get("result", {}),
+        "guard_reasons": out.get("guard_reasons", []),
+    }
