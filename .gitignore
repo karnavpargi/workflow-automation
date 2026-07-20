@@ -17,4 +17,5 @@ venv/
 .env
 .env.*
 !.env.example
-graphify-out/*
+graphify-out/
+.worktrees/
