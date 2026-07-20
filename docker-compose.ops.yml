@@ -1,0 +1,38 @@
+# Free OSS monitoring profile.
+# Brings up Prometheus + Grafana alongside the main stack.
+# Usage:
+#   docker compose -f docker-compose.yml -f docker-compose.ops.yml up -d
+#
+# Grafana: http://localhost:3001  (admin / admin — change in prod)
+# Prometheus: http://localhost:9090
+#
+# Both images are the official free/OSS upstream builds.
+
+services:
+  prometheus:
+    image: prom/prometheus:v2.55.0
+    ports: ["9090:9090"]
+    volumes:
+      - "./ops/dashboards/prometheus.yml:/etc/prometheus/prometheus.yml:ro"
+    depends_on: [web, ai_service]
+
+  grafana:
+    image: grafana/grafana-oss:11.3.0
+    ports: ["3001:3000"]
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: admin
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+      GF_AUTH_ANONYMOUS_ORG_ROLE: Viewer
+    volumes:
+      - "./ops/dashboards/provisioning:/etc/grafana/provisioning:ro"
+    depends_on: [prometheus]
+
+  # Mattermost webhook relay is not run as a service here; the
+  # alertmanager config below forwards to an external Mattermost
+  # webhook (set the URL in .env as MATTERMOST_WEBHOOK_URL).
+  alertmanager:
+    image: prom/alertmanager:v0.27.0
+    ports: ["9093:9093"]
+    volumes:
+      - "./ops/dashboards/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro"
+    depends_on: [prometheus]
