@@ -21,6 +21,7 @@ TENANT_SCOPED_TABLES = [
     "followups_followuprule",
     "followups_reminder",
     "dataentry_dataentryrecord",
+    "ai_audit_llmcall",
 ]
 
 
