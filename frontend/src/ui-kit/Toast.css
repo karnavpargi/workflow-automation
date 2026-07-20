@@ -1,0 +1,26 @@
+.wa-toast-viewport {
+  position: fixed;
+  top: var(--space-4);
+  right: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  z-index: 200;
+  max-width: 360px;
+}
+
+.wa-toast {
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md);
+  background: var(--color-fg);
+  color: var(--color-bg);
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.2);
+}
+
+.wa-toast--success {
+  background: var(--color-success);
+}
+
+.wa-toast--danger {
+  background: var(--color-danger);
+}
