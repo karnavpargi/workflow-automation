@@ -23,6 +23,12 @@ class Tenant(models.Model):
     slug = models.SlugField(unique=True)
     created_at = models.DateTimeField(auto_now_add=True)
     is_active = models.BooleanField(default=True)
+    webhook_secret = models.CharField(
+        max_length=64,
+        blank=True,
+        default="",
+        help_text="HMAC-SHA256 secret used to verify inbound webhook payloads.",
+    )
 
     def __str__(self) -> str:
         """Return the tenant name."""
