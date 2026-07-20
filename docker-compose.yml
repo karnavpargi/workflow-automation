@@ -1,6 +1,6 @@
 services:
   db:
-    image: postgres:16-alpine
+    image: pgvector/pgvector:pg16
     environment:
       POSTGRES_DB: wa
       POSTGRES_USER: wa
@@ -74,6 +74,31 @@ services:
       timeout: 3s
       retries: 10
 
+  ollama:
+    image: ollama/ollama:latest
+    ports: ["11434:11434"]
+    volumes: ["ollama_data:/root/.ollama"]
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:11434/api/tags || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  ai_service:
+    build:
+      context: .
+      dockerfile: Dockerfile.ai
+    env_file: .env
+    environment:
+      AI_DATABASE_URL: postgresql://wa:wa@db:5432/wa
+      AI_OLLAMA_BASE_URL: http://ollama:11434
+    ports: ["8001:8001"]
+    volumes: [".:/app"]
+    depends_on:
+      db: { condition: service_healthy }
+      ollama: { condition: service_healthy }
+
 volumes:
   db_data:
   minio_data:
+  ollama_data:
