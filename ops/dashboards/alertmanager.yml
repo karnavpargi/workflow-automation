@@ -1,0 +1,16 @@
+# Alertmanager config that forwards high-severity alerts to a
+# Mattermost webhook. The webhook URL is read from the host
+# environment via the `MATTERMOST_WEBHOOK_URL` env var.
+
+route:
+  receiver: mattermost
+  group_by: [alertname, service]
+  group_wait: 30s
+  group_interval: 5m
+  repeat_interval: 1h
+
+receivers:
+  - name: mattermost
+    webhook_configs:
+      - url: "${MATTERMOST_WEBHOOK_URL}"
+        send_resolved: true
