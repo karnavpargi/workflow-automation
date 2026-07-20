@@ -1,0 +1,21 @@
+# Multi-stage build for the React SPA.
+# Stage 1: build the static bundle.
+FROM node:20-alpine AS build
+WORKDIR /app
+COPY package.json package-lock.json* ./
+RUN npm ci --no-audit --no-fund
+COPY tsconfig.json tsconfig.node.json vite.config.ts eslint.config.js index.html ./
+COPY src ./src
+RUN npm run build
+
+# Stage 2: serve via Caddy.
+FROM caddy:2-alpine
+COPY --from=build /app/dist /srv
+COPY <<EOF /etc/caddy/Caddyfile
+:8002 {
+  root * /srv
+  file_server
+  try_files {path} {path}.html /index.html
+}
+EOF
+EXPOSE 8002

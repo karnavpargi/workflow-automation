@@ -5,6 +5,12 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { AuthProvider } from "../app-shell/AuthProvider";
 import { Clients } from "../admin-portal/Clients";
 
+interface Client {
+  id: number;
+  name: string;
+  email: string;
+}
+
 function wrap(node: React.ReactNode) {
   const qc = new QueryClient({
     defaultOptions: { queries: { retry: false } },
@@ -31,8 +37,8 @@ describe("Clients page", () => {
           ok: true,
           status: 200,
           headers: { get: () => "application/json" },
-          json: async () => [{ id: 1, name: "Acme", email: "a@x.io" }],
-          text: async () => "",
+          json: async (): Promise<Client[]> => [{ id: 1, name: "Acme", email: "a@x.io" }],
+          text: async (): Promise<string> => "",
         };
       }
       if (url.endsWith("/api/clients/") && init?.method === "POST") {
@@ -40,8 +46,8 @@ describe("Clients page", () => {
           ok: true,
           status: 201,
           headers: { get: () => "application/json" },
-          json: async () => ({ id: 2, name: "Acme", email: "a@x.io" }),
-          text: async () => "",
+          json: async () => ({ id: 2, name: "Acme", email: "a@x.io" } as Client),
+          text: async (): Promise<string> => "",
         };
       }
       return {

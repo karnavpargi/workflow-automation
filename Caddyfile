@@ -1,3 +1,19 @@
+# Dev routing: all traffic to the Django web container.
 localhost {
     reverse_proxy web:8000
+}
+
+# Production routing: root → frontend SPA, /api → Django, /ai → FastAPI.
+:80 {
+    # Static SPA built by Dockerfile.frontend (mounted at /srv).
+    root * /srv
+    # Django REST + admin + auth under /api and /admin.
+    reverse_proxy /api/* web:8000
+    reverse_proxy /admin/* web:8000
+    reverse_proxy /static/* web:8000
+    # FastAPI AI service under /ai.
+    reverse_proxy /ai/* ai_service:8001
+    # Everything else: serve the SPA (fall back to /index.html for client routes).
+    try_files {path} {path}.html /index.html
+    file_server
 }
