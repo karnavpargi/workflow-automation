@@ -1,0 +1,4 @@
+# Quality thresholds for the nightly eval job.
+# A regression below these values fails the workflow.
+
+email_parse_macro_f1: 0.80
