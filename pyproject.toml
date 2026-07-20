@@ -51,6 +51,13 @@ ai = [
   "pymupdf>=1.24",
   "psycopg[binary]>=3.1",
 ]
+ops = [
+  "locust>=2.32",
+  "prometheus-client>=0.20",
+  "prometheus-fastapi-instrumentator>=7.0",
+  "django-prometheus>=2.3",
+  "PyYAML>=6.0",
+]
 
 [tool.ruff]
 line-length = 88

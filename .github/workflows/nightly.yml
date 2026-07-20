@@ -1,0 +1,21 @@
+name: Nightly eval
+
+on:
+  schedule:
+    - cron: "0 3 * * *"
+  workflow_dispatch:
+
+jobs:
+  eval:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install backend + AI deps
+        run: pip install -e ".[ai,dev]"
+      - name: Run nightly eval
+        run: python ops/eval/run_nightly.py
+      - name: Verify last_ok marker
+        run: test -f ops/eval/last_ok
