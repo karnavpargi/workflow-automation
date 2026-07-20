@@ -98,6 +98,13 @@ services:
       db: { condition: service_healthy }
       ollama: { condition: service_healthy }
 
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+    ports: ["8002:8002"]
+    depends_on: [caddy]
+
 volumes:
   db_data:
   minio_data:
