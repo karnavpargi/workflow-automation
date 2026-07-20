@@ -5,6 +5,11 @@ offset relative to due date, message template). A :class:`Reminder` is a
 concrete scheduled instance pointing at a recipient and a fire time.
 ``FollowupRule`` deletion uses ``SET_NULL`` so a fired/missed reminder
 record is preserved even if the originating rule is later removed.
+
+The :class:`SuccessfulFollowup` model captures the LLM-drafted
+message text of reminders that were approved and sent; the AI service
+retrieves the most-recent N of these as positive RAG examples when
+drafting a new follow-up.
 """
 
 from django.db import models
@@ -50,8 +55,9 @@ class Reminder(models.Model):
         subject: Short subject line.
         due_at: When to fire. Indexed for the Beat scan.
         recipient_email: Email target (used when channel includes email).
-        status: ``pending`` | ``sent`` | ``cancelled``.
+        status: ``draft`` | ``pending`` | ``sent`` | ``cancelled``.
         context: JSON dict used to fill the rule template.
+        draft_text: LLM-proposed message text awaiting HITL review.
         created_at: Row creation timestamp.
     """
 
@@ -92,3 +98,39 @@ class Reminder(models.Model):
         help_text="LLM-proposed message text awaiting HITL review.",
     )
     created_at = models.DateTimeField(auto_now_add=True)
+
+
+class SuccessfulFollowup(models.Model):
+    """An approved-and-sent follow-up; a positive RAG example.
+
+    When a ``Reminder`` is approved (DRAFT -> PENDING) and eventually
+    sent, its ``draft_text`` is captured here for retrieval. The AI
+    service's ``FollowupDraftingAgent`` reads the most-recent N rows
+    for the tenant and includes them in the LLM prompt as examples
+    of "what worked before".
+
+    Attributes:
+        tenant: Owning tenant.
+        reminder: The originating :class:`Reminder` (nullable so
+            successful followups survive if the reminder is purged).
+        draft_text: The message that was sent.
+        sent_at: Timestamp the message was actually sent.
+    """
+
+    tenant = models.ForeignKey(
+        "tenants.Tenant", on_delete=models.CASCADE, related_name="successful_followups"
+    )
+    reminder = models.ForeignKey(
+        Reminder,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="successful_followups",
+    )
+    draft_text = models.TextField()
+    sent_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        """Index on (tenant, -sent_at) for the "recent N" query."""
+
+        indexes = [models.Index(fields=["tenant", "-sent_at"])]

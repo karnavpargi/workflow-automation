@@ -20,6 +20,7 @@ TENANT_SCOPED_TABLES = [
     "invoices_recurringschedule",
     "followups_followuprule",
     "followups_reminder",
+    "followups_successfulfollowup",
     "dataentry_dataentryrecord",
     "ai_audit_llmcall",
 ]
